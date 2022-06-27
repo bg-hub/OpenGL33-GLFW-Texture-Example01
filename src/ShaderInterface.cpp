@@ -22,7 +22,7 @@ void ShaderInterface::setVerbose(bool value) {
  *  wird die Textur hier erzeugt.
  */
 void ShaderInterface::initShaderInterface(ApplicationModel &model) {
-    shaderProgram.init_shader_interface();
+    shaderProgram.createShaderProgram();
     queryAdresses();
 
     //  Es folgt die Erzeugung der langlebigen Objekte

@@ -1,7 +1,7 @@
 #ifndef _TEXTURE_HPP_
 #define _TEXTURE_HPP_
 
-#include <GL/gl.h>
+#include <CustomizedGL.hpp>
 
 /*
  *  Eine Instanz der Klasse  Texture  stellt eine Textur

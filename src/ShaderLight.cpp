@@ -26,6 +26,11 @@ void ShaderLight::installProperties(LightProperties &properties) {
 /*
  *  Die Methode ermittelt die Adressen der im Vertex Shader
  *  vereinbarten Programmparameter.
+ *  sourceName  ist der Name der Lichtquelle, so wie er in der
+ *  Variablenvereinbarung im Vertexshader vorkommt. Gegenwärtig
+ *  verwendete Werte sind "light0"  und "light1".
+ *
+ *  Aufruf in  ShaderInterface::queryAdresses().
  */
 void ShaderLight::readAddresses(GLuint shaderProgram, const GLchar *sourceName) {
     ambientColor = readAddress(shaderProgram, sourceName, ".ambientColor");
@@ -36,6 +41,11 @@ void ShaderLight::readAddresses(GLuint shaderProgram, const GLchar *sourceName) 
     isFixed = readAddress(shaderProgram, sourceName, ".isFixed\0");
 }
 
+/*
+ *  Die Methode bildet aus dem Namen der Lichtquelle und dem Namen
+ *  eines Attributs der Lichtqulle den vollständigen Attributnamen
+ *  und ermittelt die Adresse des Attributs im Shaderprogramm.
+ */
 GLint ShaderLight::readAddress(GLuint shaderProgram,
                                  const GLchar *sourceName,
                                  const GLchar *varName) {

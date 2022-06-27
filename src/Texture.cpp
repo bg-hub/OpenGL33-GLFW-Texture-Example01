@@ -72,8 +72,8 @@ void Texture::installTexture () {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         OpenGLErrorHandler::checkAndReportErrors("glTextParameteri 2");
     
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLfloat)GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         OpenGLErrorHandler::checkAndReportErrors("glTextParameteri 3");
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLfloat)GL_NEAREST);  
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);  
         OpenGLErrorHandler::checkAndReportErrors("glTextParameteri 4");
 }

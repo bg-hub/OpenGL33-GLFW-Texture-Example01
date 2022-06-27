@@ -29,9 +29,12 @@ void ShaderProgram::setVerbose(bool v) {
     verbose = v;
 }
 
-
-void ShaderProgram::init_shader_interface() {
-    init_shaders();    
+/*
+ *  Die Methode erzeugt das Shaderprogramm und stellt es für
+ *  die Benutzung bereit.
+ */
+void ShaderProgram::createShaderProgram() {
+    initShaders();    
     
     program = glCreateProgram();
     OpenGLErrorHandler::checkAndReportErrors("glCreateProgram");
@@ -53,7 +56,7 @@ void ShaderProgram::init_shader_interface() {
  *  Die Methode veranlasst das Einlesen und die Compilierung
  *  beider Shader.
  */
-bool ShaderProgram::init_shaders() {
+bool ShaderProgram::initShaders() {
     bool res1, res2;
     res1 = loadAndCompileShader("./res/VertexShader.glsl",
                                 vertexShader,

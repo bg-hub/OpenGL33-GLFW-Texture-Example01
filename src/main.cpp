@@ -8,7 +8,7 @@
 //  Das Modell wird hier vereinbart, damit es den Callback-Funktionen
 //  sichtbar ist.
 ApplicationModel model;
-ShaderInterface shaderprogram;
+ShaderInterface shaderinterface;
 
 
 /*
@@ -166,21 +166,21 @@ int main(int argc, char *argv[])
     glfwSetKeyCallback(wnd, keyboardInputCallback);
 
     //  Shaderprogramm compilieren
-    shaderprogram.initShaderInterface(model);
+    shaderinterface.initShaderInterface(model);
 
     glfwShowWindow(wnd);   //  Fenster sichtbar machen
 
     //  Ereignisverarbeitungsschleife
     while (!glfwWindowShouldClose(wnd))
     {
-        shaderprogram.renderImage(model);
+        shaderinterface.renderImage(model);
         glfwSwapBuffers(wnd);
         glfwPollEvents();
         model.advanceAnimationParameter();
     }
 
     //  Das Shaderprogramm freigeben
-    shaderprogram.releaseShaderProgram();
+    shaderinterface.releaseShaderProgram();
 
     glfwTerminate();
     return 0;

@@ -16,7 +16,7 @@ class ShaderProgram {
     ShaderProgram();
     ~ShaderProgram();
 
-    void init_shader_interface();
+    void createShaderProgram();
     GLuint getProgramID();
     void setVerbose(bool v);
 
@@ -25,7 +25,7 @@ class ShaderProgram {
     GLuint program;
     GLuint vertexShader;
     GLuint fragmentShader;
-    bool init_shaders();
+    bool initShaders();
     bool loadAndCompileShader(const char *fileName,
                               GLuint &shaderId,
                               GLenum shaderType);
