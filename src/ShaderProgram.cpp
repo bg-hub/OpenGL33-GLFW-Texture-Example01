@@ -4,8 +4,10 @@
 #include <iostream>
 
 
-ShaderProgram::ShaderProgram() {
-    
+ShaderProgram::ShaderProgram() :
+    verbose(false)
+{
+
 }
 
 /*
@@ -17,6 +19,14 @@ ShaderProgram::~ShaderProgram() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     glDeleteProgram(program);
+}
+
+GLuint ShaderProgram::getProgramID() {
+    return program;
+}
+
+void ShaderProgram::setVerbose(bool v) {
+    verbose = v;
 }
 
 
@@ -32,7 +42,9 @@ void ShaderProgram::init_shader_interface() {
     OpenGLErrorHandler::checkAndReportErrors("glAttachShader");
     glLinkProgram(program);
     OpenGLErrorHandler::checkAndReportErrors("glLinkProgram");
-    //std::cout << "shader programm linked" << std::endl;
+    if (verbose) {
+        std::cout << "shader programm linked" << std::endl;
+    }
     glUseProgram(program);
 }
 
@@ -46,16 +58,21 @@ bool ShaderProgram::init_shaders() {
     res1 = loadAndCompileShader("./res/VertexShader.glsl",
                                 vertexShader,
                                 GL_VERTEX_SHADER);
-    std::cout << "Compilation of Vertex shader: " << res1 << std::endl;
+    if (verbose) {
+        std::cout << "Compilation of Vertex shader: " << res1 << std::endl;
+    }
     res2 = loadAndCompileShader("./res/FragmentShader.glsl",
                                 fragmentShader,
                                 GL_FRAGMENT_SHADER);
-    std::cout << "Compilation of Fragment shader: " << res2 << std::endl;
+    if (verbose) {
+        std::cout << "Compilation of Fragment shader: " << res2 << std::endl;
+    }
     return res1 && res2;
 }
 
 /*
- *
+ *  Die Methode liest den Quelltext eines Shaders aus der
+ *  angegebenen Datei und compiliert ihn.
  */
 bool ShaderProgram::loadAndCompileShader
            (const char *fileName,
@@ -83,20 +100,24 @@ bool ShaderProgram::loadAndCompileShader
         fclose(f);    
         GLchar* refString = &codeString[0];
         GLint compileStatus;
-        std::cout << codeString << std::endl;
-        std::cout << " ---------------------------------------------" << std::endl;
+        if (verbose) {
+            std::cout << codeString << std::endl;
+            std::cout << " ---------------------------------------------" << std::endl;
+        }
         shaderId  = glCreateShader(shaderType);
-        std::cout << "shader created: " << shaderId << std::endl;
           OpenGLErrorHandler::checkAndReportErrors("glCreateShader(GL_VERTEX_SHADER)");
         glShaderSource(shaderId, 1, (const GLchar**)&refString, 0);
           OpenGLErrorHandler::checkAndReportErrors("glSgaderSource(GL_VERTEX_SHADER)");
         glCompileShader(shaderId);
           OpenGLErrorHandler::checkAndReportErrors("glCompileShader(GL_VERTEX_SHADER)");
 
-        std::cout << "access compile status: ";
         glGetShaderiv(shaderId, GL_COMPILE_STATUS, &compileStatus);
-        std::cout << (compileStatus ? "OK" : "FAILURE") << std::endl;
          OpenGLErrorHandler::checkAndReportErrors("glGetShaderiv");
+        if (verbose) {
+            std::cout << "Shader Id: " << shaderId 
+                      << " compile status: "
+                      << (compileStatus ? "OK" : "FAILURE") << std::endl;
+        }
         if (!compileStatus) {  //  ausführliches Fehlerprotokoll
             res = false;
             std::cout << "compile status: " << compileStatus << std::endl;
@@ -111,6 +132,5 @@ bool ShaderProgram::loadAndCompileShader
             std::cout << "compilation failure in shader" << std::endl;
         }
     }
-    std::cout << "done " << std::endl;
     return res;
 }

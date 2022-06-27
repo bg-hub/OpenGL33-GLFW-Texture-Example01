@@ -1,12 +1,12 @@
 #ifndef _APP_MODEL_HPP_
 #define _APP_MODEL_HPP_
 
-#include <gtkmm.h>       //   for Glib::RefPtr
 #include "CustomizedGL.hpp"
 #include "SpacialPoint.hpp"
 #include "LightProperties.hpp"
 #include "MaterialProperties.hpp"
 #include "Texture.hpp"
+#include "VectorTriple.hpp"
 
 /*
  *  Eine Instanz der Klasse  ApplicationModel  speichert alle
@@ -18,23 +18,15 @@
  */
 class ApplicationModel {
     public:
-        ApplicationModel(Glib::RefPtr<Gtk::Application> a);
+        ApplicationModel();
         ~ApplicationModel();
 
-    private:
-        float const ganghoehe = 2.0f/3.0f;
-        float const rt =  1.0f;
-        float const radius = 4.0f;
-        float const d = 4.0f;
- 
-        Glib::RefPtr<Gtk::Application> app;
-        //  Bestandteile des Fensters:
-        GtkWidget    *mainWindow;
-        GtkWidget    *drawingArea;
 
-    public:
-
+        int          screen_width, screen_height, image_width;
         bool         hasShader;
+        bool         showTexture;
+        bool         orthoProjection;
+
         //  Geometriedaten:
         int           c_nx, c_ny;
         int           sizeIndices;
@@ -46,34 +38,37 @@ class ApplicationModel {
 
         void advanceAnimationParameter();
         float getRotationAngle();
+        void toggleTexture();
+        void toggleProjection();
 
         void computePermanentGeometryData(GLuint tcbuffer, GLuint elementbuffer);
         void computeVariableGeometryData(GLuint vertexbuffer, GLuint normalenbuffer);
 
     private:
+        int const    hoehe = 2.3;
+        int const    blaetter = 5;
+ 
+    public:
         // Parameter der Animation:
-        int           counter;
-        float         phi;
-        bool          parameterUpdated;
+        int          counter;
+        float        phi;
+        int          delay;
+        int          delayCounter;
+        bool         parameterUpdated;
 
+    private:
         GLfloat      *vertices;
         GLfloat      *vertexNormals;
 
-
         void computeVerticesAndNormals
                  (int nx, int ny,
-                  float t0, float tStop,
-                  float radius
-                 );
-
+                  float x0, float xStop,
+                  float y0, float yStop);
         void createInvariantGeometryData
                  (int nx, int ny,
                   GLushort *indices, GLfloat *textureCoordinates 
                  );
-
-        void fn1   (int cnt, float t, SpacialPoint *ft);
-        void fn1d1 (int cnt, float t, SpacialPoint *ft);
-        void fn1d2 (int cnt, float t, SpacialPoint *ft);
+        void fnp (float r, float t, VectorTriple *ft);
 };
 
 #endif

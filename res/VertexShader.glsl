@@ -8,17 +8,10 @@ precision mediump float;
  *   2020-09-27
  */
 
-//  Attribute (Geometriedaten eines Vertex)
-layout(location = 0) in  vec3 position;
-layout(location = 1) in  vec3 normals;
-layout(location = 2) in  vec2 textureCoordinate;
+layout(location = 0) in  vec2 textureCoordinate;
+layout(location = 1) in  vec3 position;
+layout(location = 2) in  vec3 normals;
 
-out vec2 texCoordinate;
-out vec4 fragmentColor;
-
-//
-//  Datenstrukturen
-//
 
 struct materialProperties {
     vec4   ambientColor;
@@ -46,7 +39,7 @@ const float fZero = 0.0;
 const float fOne  = 1.0;
 
 //
-//   Variablen des Shaders:
+//    Attribute und Variablen des Shaders:
 //
 
 uniform bool   useTexture;
@@ -69,6 +62,8 @@ vec4     matAmbientColor;
 vec4     matDiffuseColor;
     
 vec4     v_front_color;
+out vec2 texCoordinate;
+out vec4 fragmentColor;
 
 /**
  *   Berechnung der Wirkung der Lichtquelle  lightSource

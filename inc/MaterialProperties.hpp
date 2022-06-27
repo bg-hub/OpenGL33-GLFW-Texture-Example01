@@ -25,5 +25,3 @@ struct MaterialProperties {
      float shininess;
 };
 #endif
-
-//  https://www.fluentcpp.com/2018/06/15/should-structs-have-constructors-in-cpp/

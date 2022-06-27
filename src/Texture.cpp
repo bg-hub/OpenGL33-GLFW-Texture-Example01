@@ -1,6 +1,5 @@
 #include "Texture.hpp"
 #include "OpenGLErrorHandler.hpp"
-#include <iostream>
 
 
 Texture::Texture(int w, int h, GLint f, GLubyte *pixels) :
@@ -13,7 +12,6 @@ Texture::Texture(int w, int h, GLint f, GLubyte *pixels) :
 
 Texture::~Texture() {
     delete [] textureBuffer;
-    std::cout << "Textur wurde freigegeben" << std::endl;
 } 
 
 
@@ -21,18 +19,16 @@ Texture::~Texture() {
  *  Herstellung einer Grauwerttextur 
  *  als RGB-Textur ohne Alpha-Kanal
  */
-Texture Texture::createRGBTexture(int w, int h, GLubyte bright, GLubyte dark) {
-    int c_textureWidth = w;
-    int c_textureHeight = h;
-    GLubyte *textureBuffer = new GLubyte[3*c_textureWidth*c_textureHeight];  //  für eine RGB-Textur
+Texture Texture::createRGBTexture(int tWidth, int tHeight, GLubyte bright, GLubyte dark) {
+    GLubyte *textureBuffer = new GLubyte[3*tWidth*tHeight];  //  für eine RGB-Textur
 
     GLubyte* textureBufferPtr = textureBuffer;
     
-    for (int i = 0; i < c_textureWidth; i++) {
-        for (int j = 0; j < c_textureHeight; j++) {
+    for (int i = 0; i < tWidth; i++) {
+        for (int j = 0; j < tHeight; j++) {
             GLubyte colorToUse;
-            if ((i <c_textureWidth/2 && j < c_textureHeight/2)
-               || (i >= c_textureWidth/2 && j >= c_textureHeight/2)) {
+            if ((i <tWidth/2 && j < tHeight/2)
+               || (i >= tWidth/2 && j >= tHeight/2)) {
                    colorToUse = bright;
                } else {
                    colorToUse = dark;
@@ -42,14 +38,13 @@ Texture Texture::createRGBTexture(int w, int h, GLubyte bright, GLubyte dark) {
             *textureBufferPtr++ = colorToUse;
         }
     }
-    return Texture (c_textureWidth, c_textureHeight,
+    return Texture (tWidth, tHeight,
                     GL_RGB,
                     textureBuffer);
 }
 
 
-
-/**
+/*
  *  Die Bitmap der Textur wird an die GPU übertragen. Überdies
  *  werden Texturparameter für die Wiederholung der Textur (tiling)
  *  übertragen.
