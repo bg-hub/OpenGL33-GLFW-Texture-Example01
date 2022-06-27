@@ -8,7 +8,7 @@
 /*
  *  Eine Instanz der Klasse  ShaderProgram leistet
  *  die Herstellung und die Freigabe eines Shaderprogramms
- *  für OpenGL 4.5.
+ *  für OpenGL 3.3.
  */
 class ShaderProgram {
 
@@ -17,14 +17,13 @@ class ShaderProgram {
     ~ShaderProgram();
 
     void init_shader_interface();
-    GLuint getProgramID();
-    void setVerbose(bool v);
-
-  private:
-    GLuint verbose;
     GLuint program;
+
+    GLuint verbose;
     GLuint vertexShader;
     GLuint fragmentShader;
+
+  private:
     bool init_shaders();
     bool loadAndCompileShader(const char *fileName,
                               GLuint &shaderId,

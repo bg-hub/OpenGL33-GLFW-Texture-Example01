@@ -2,32 +2,24 @@
 #include "OpenGLErrorHandler.hpp"
 
 /*
- *  Der Konstruktor initialisiert eine Instanz mit den Parametern der
- *  Animation, den Materialfarben des Szeneobjekts und den
- *  Lichteigenschaften. Darüber hinaus wird Speicher für jene
- *  Geometriedaten reserviert, die für jedes Szenebild der
- *  Animation neu berechnet werden müssen.
+ *  Der Konstruktur reserviert Speicher für die Speicherung der
+ *  Geometriedaten des Szeneobjekts. Er erzeugt eine Textur,
+ *  berechnet die Geometriedaten und legt Materialfarben und
+ *  Lichtfarben fest. 
  */
-ApplicationModel::ApplicationModel() : 
-    showTexture(false),
-    orthoProjection(true),
-    c_nx(12),
-    c_ny(117),
+ApplicationModel::ApplicationModel(Glib::RefPtr<Gtk::Application> a) : 
+    app(a),
+    c_nx(15),
+    c_ny(201),
+    //texture(Texture::createLuminanceTexture(256, 256, (GLubyte) 250, (GLubyte) 180)),
+       //  Luminanztexturen sind eine Spezialität von OpenGL ES
     texture(Texture::createRGBTexture(256, 256, (GLubyte) 250, (GLubyte) 180)),
     ambientSceneLight { 0.3f, 0.3f, 0.3f, 1.0f },
     counter(0),
     phi(0.0f),
-    delay(0),
-    delayCounter(0),
     parameterUpdated(true)
 {
     sizeIndices = 6*(c_nx - 1)*(c_ny - 1);
-
-    //  Die Felder, die Werte aufnehmen, die für jedes
-    //  Szenebild neu zu berechnen wind, werden als
-    //  Instanzvariablen vereinbart, um das häufige
-    //  Erzeugen und Freigeben von Speicherbereichen
-    //  zu vermeiden.
     vertices = new GLfloat[3*c_nx*c_ny];
     vertexNormals = new GLfloat[3*c_nx*c_ny];
 
@@ -63,27 +55,23 @@ ApplicationModel::ApplicationModel() :
            true,
            true
          };
+
+    //computeGeometryData(); 
 }
 
+/*
+ *  Der Destruktur gibt den Speicher frei, der für die
+ *  Speicherung der Geometriedaten des Szeneobjekts
+ *  reserviert wurde.
+ *  Die Textur wird hier nicht gelöscht, da ihr Destruktor
+ *  nach den Regeln von C++ aufgerufen wird, wenn eine
+ *  Instanz von  ApplicationModel freigegeben wird.
+ */
 ApplicationModel::~ApplicationModel() {
     delete [] vertices;
     delete [] vertexNormals;
-    //  Nach dem Verlassen dieses Destruktors werden
-    //  die Destruktoren der Instanzvariablen ausgeführt.
-    //  Die einzige Instanzvariable, für die ein Destruktor
-    //  tatsächlich ausgeführt wird, ist die Variable
-    //  textur 
 }
 
-
-/*
- *  Ein Aufruf dieser Methode aktualisiert die Animations-
- *  parameter der Szene. Damit wird das Fortschreiten der
- *  Animation vorbereitet.
- *
- *  phi  ist der Rotationswinkel in Grad,  counter ist der
- *  Flächendeformationsparameter.
- */
 void ApplicationModel::advanceAnimationParameter() {
     int newCounter = counter;
 
@@ -96,49 +84,136 @@ void ApplicationModel::advanceAnimationParameter() {
     parameterUpdated = true;
 }
 
-/*
- *  Die Methode gibt den aktuellen Rotationswinkel des
- *  Szeneobjekts zurück.
- *
- *  Aufruf in  ShaderInterface>>renderImage
- */
 float ApplicationModel::getRotationAngle() {
     return phi;
 }
 
-/*
- *  Die Methode schaltet den Anzeigemodus für die Textur um.
- *  Aufruf in  keyboardInputCallback  (in Datei  main.cpp)
- */
-void ApplicationModel::toggleTexture() {
-    showTexture = !showTexture;
-}
 
 /*
- *  Die Methode schaltet den Anzeigemodus für die
- *  Projektion um.
- *  Aufruf in  keyboardInputCallback  (in Datei  main.cpp)
+ *  Die Methode berechnet die Geometriedaten einer Tube mit
+ *  Radius  radius  um die Raumkurve, die durch die in der
+ *  Klasse bereitgestellten Funktionen  fn1, fn1d1, fn1d2
+ *  definiert wird. 
+ *  Aufrufparameter:
+ *  nx       Anzahl der auf einem Kreis um einen Punkt
+             der Raumkurve berechneten Stützstellen.
+ *           Diese Zahl sollte ungerade sein, damit die
+ *           Texturierung ein Schachbrettmuster liefert.
+ *  ny       Anzahl der Stützstellen, die für die
+             Raumkurve berechnet werden.
+ *  y0       Anfangswert des Parameters der raumkurve.
+ *  yStop    Endwert des Parameters der Raumkurve.
+ *  radius   Der Radius der Tube um die Raumkurve. Der
+ *           sollte im Verhältnis zum Durchmesser der
+ *           Schraubenlinie nicht zu groß gewählt werden.
  */
-void ApplicationModel::toggleProjection() {
-    orthoProjection = ! orthoProjection;
+
+void ApplicationModel::computeVerticesAndNormals
+                 (int nx, int ny,
+                  float y0, float yStop,
+                  float radius)  {
+    float stepPy = (yStop - y0)/(ny - 1);
+    float deltaT = 2.0f*M_PI/(nx - 1);
+    
+    SpacialPoint fValue, d1Value, d2Value;
+    SpacialPoint tangente, binormale, normale;
+    SpacialPoint xx, pt;
+    
+    GLfloat *vertexPtr = vertices;
+    GLfloat *vertexNormalsPtr = vertexNormals;
+    
+    for (int i = 0; i < ny; i++) {
+        float t = y0 + i*stepPy;
+        fn1(counter, t, &fValue);
+        fn1d1(counter, t, &d1Value);
+        fn1d2(counter, t, &d2Value);
+        tangente = d1Value / d1Value.euclideanNorm();
+        binormale = d1Value.cross(d2Value);
+        if (binormale.euclideanNorm() < 1.0e-8) {
+            binormale = SpacialPoint(-(tangente.getY() + tangente.getZ()),
+                                     tangente.getX(),
+                                     tangente.getX());
+        }
+        binormale = binormale / binormale.euclideanNorm();
+        normale = binormale.cross(tangente);
+        GLfloat *firstIndex = vertexPtr;
+        GLfloat *firstNormalIdx = vertexNormalsPtr;
+        for (int j = 0; j < nx  - 1; j++) {
+            float phi = j * deltaT;
+            xx = normale * sin(phi) + binormale*cos(phi);
+            pt = fValue + xx*radius;
+            *vertexPtr++ = pt.getX();
+            *vertexPtr++ = pt.getY();
+            *vertexPtr++ = pt.getZ();
+            *vertexNormalsPtr++ = xx.getX();
+            *vertexNormalsPtr++ = xx.getY();
+            *vertexNormalsPtr++ = xx.getZ();
+        }
+        for (int j = 0; j < 3; j++) {
+            *vertexPtr++ = *firstIndex++;
+            *vertexNormalsPtr++ = *firstNormalIdx++;
+        }
+    }
 }
+
+
+/*
+ *  Die Methode berechnet die Geometriedaten einer Tube mit
+ *  Radius  radius  um die Raumkurve, die durch die in der
+ *  Klasse bereitgestellten Funktionen  fn1, fn1d1, fn1d2
+ *  definiert wird. 
+ *  Aufrufparameter:
+ *  nx       Anzahl der auf einem Kreis um einen Punkt
+             der Raumkurve berechneten Stützstellen.
+ *           Diese Zahl sollte ungerade sein, damit die
+ *           Texturierung ein Schachbrettmuster liefert.
+ *  ny       Anzahl der Stützstellen, die für die
+             Raumkurve berechnet werden.
+ *  y0       Anfangswert des Parameters der raumkurve.
+ *  yStop    Endwert des Parameters der Raumkurve.
+ *  radius   Der Radius der Tube um die Raumkurve. Der
+ *           sollte im Verhältnis zum Durchmesser der
+ *           Schraubenlinie nicht zu groß gewählt werden.
+ */
+void ApplicationModel::createInvariantGeometryData
+                 (int nx, int ny,
+                  GLushort *indices, GLfloat *textureCoordinates 
+                 ) {
+    GLfloat *texCoordPtr = textureCoordinates;
+    float deltaX = 0.5f,
+          deltaY = 0.5f;
+       
+    for (int i = 0; i < ny; i++) {
+        float tt = i*deltaY;
+        for (int j = 0; j < nx  - 1; j++) {
+            float tu = j*deltaX;
+            *texCoordPtr++ = tt;
+            *texCoordPtr++ = tu;
+        }
+        *texCoordPtr++ = tt;
+        *texCoordPtr++ = (nx - 1)*deltaX;
+    }
+    //  Berechnung der Mesh-Indices
+    GLushort *indexPtr = indices; 
+    for (int i = 0; i < nx - 1; i++) {
+        for (int j = 0; j < ny - 1; j++) {
+            unsigned int k = (unsigned int)(j*nx + i);
+            *indexPtr++ = k;
+            *indexPtr++ = k + nx;
+            *indexPtr++ = k + 1;
+            *indexPtr++ = k + 1;
+            *indexPtr++ = k + nx;
+            *indexPtr++ = k + nx + 1;
+        }
+    }
+}
+
 
 /*
  *  Die Methode berechnet die Indices des Gitters und die
- *  Texturkoordinaten und überträgt die Werte in die 
- *  vorbereiteten VBOs. 
+ *  Texturkoordinaten und überträgt die Werte in die GPU. 
  *  Für das hier verwendete Szeneobjekt müssen die Gitterindices
  *  und die Texturkoordinaten nur ein enziges Mal berechnet werden.
- *
- *  Parameter:
- *    tcbuffer
- *       ID des Vertex Buffer Objects, das die Texturkoordinaten
- *       aufnimmt.
- *    elementbuffer
- *       ID des Vertex Buffer Objects, das die Gitterindices
- *       aufnimmt, aus denen das Dreiecksnetz konstruiert wird.
- *
- *  Aufruf in  SgaderInterface>>initShaderInterface
  */
 void ApplicationModel::computePermanentGeometryData
               (GLuint tcbuffer, GLuint elementbuffer) {
@@ -146,8 +221,9 @@ void ApplicationModel::computePermanentGeometryData
     GLfloat      *textureCoordinates;
 
     //  Die Felder, die Werte aufnehmen, die nur ein einziges
-    //  rechnet und dann in die GPU übertragen werden, werden
-    //  lokal in dieser Methode bereitgestellt.
+    //  Mal berechnet und dann in die GPU übertragen werden,
+    //  werden lokal in dieser Methode bereitgestellt und nach
+    //  Gebrauch auch wieder freigegeben.
     indices = new GLushort [sizeIndices];
     textureCoordinates = new GLfloat[2*c_nx*c_ny];
 
@@ -175,30 +251,21 @@ void ApplicationModel::computePermanentGeometryData
     delete [] textureCoordinates;
 }
 
+
+
 /*
  *  Die Methode berechnet die Koordinaten der Vertices und die
- *  Vertexnormalen. Die berechneten Werte werden in die 
- *  vorbereiteten VBOs übertragen. 
+ *  Vertexnormalen. Die berechneten Werte werden in die GPU
+ *  übertragen. 
  *  Für das hier verwendete Szeneobjekt müssen die Vertices
  *  und die Vertexnormalen für jedes Szenebild neu berechnet
  *  werden, da die Animation die Geometrie des Szeneobjekts
  *  verändert.
- *  Die Neuberechnung der Geometriedaten findet nur statt, wenn
- *  sich der Animationsparameter seit der letzten Berechnung
- *  verändert hat.
- *
- *  Parameter:
- *    vertexbuffer
- *       ID des Vertex Buffer Objects, das die Raumpunkte
- *       (Vertices) der Raumfläche aufnimmt.
- *    normalenbuffer
- *       ID des Vertex Buffer Objects, das die Normalenvektoren
- *       aufnimmt.
  */
 void ApplicationModel::computeVariableGeometryData
            (GLuint vertexbuffer, GLuint normalenbuffer) {
     if (parameterUpdated) {
-        computeVerticesAndNormals(c_nx, c_ny, 1.6f, 5.0f, -M_PI, M_PI);
+        computeVerticesAndNormals(c_nx, c_ny, -3.5*M_PI, 3.5*M_PI, rt);
 
         glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
           OpenGLErrorHandler::checkAndReportErrors("glBindBuffer");
@@ -216,149 +283,38 @@ void ApplicationModel::computeVariableGeometryData
                  &(vertexNormals[0]));
           OpenGLErrorHandler::checkAndReportErrors("glBufferData");
         parameterUpdated = false;
-    }
-}
-
-
-/*
- *  Die Methode berechnet die Geometriedaten einer Raumfläche,
- *  die durch eine reellwertige Funktion f(r, t) zweier reeller
- *  Parameter r und t definiert ist.
- *  
- *  Aufrufparameter:
- *  nx       Anzahl der Stützstellen für den Parameter r.
- *  ny       Anzahl der Stützstellen für den Parameter t.
- *  x0       Anfangswert des Parameters r der Raumkurve.
- *  xStop    Endwert des Parameters r der Raumkurve.
- *  y0       Anfangswert des Parameters t der raumkurve.
- *  yStop    Endwert des Parameters t der Raumkurve.
- *  Die Stützstellen beider Parameter werden äquvidistant
- *  gewählt.
- */
-void ApplicationModel::computeVerticesAndNormals
-                 (int nx, int ny,
-                  float x0, float xStop,
-                  float y0, float yStop) {
-    float stepPx = (xStop - x0)/(nx - 1);
-    float stepPy = (yStop - y0)/(ny - 1);
-    VectorTriple triple;
-    
-    SpacialPoint sp, spNormalized;
- 
-    GLfloat* vertexPtr = vertices;
-    GLfloat* vertexNormalsPtr = vertexNormals;
-       
-    for (int i = 0; i < nx; i++) {
-        float x = x0 + i*stepPx;
-        for (int j = 0; j < ny; j++) {
-            float y = y0 + j*stepPy;
-             fnp(x, y, &triple);
-            *vertexPtr++ = triple.fn.getX();
-            *vertexPtr++ = triple.fn.getY();
-            *vertexPtr++ = triple.fn.getZ();
-            SpacialPoint n = triple.fdx.cross(triple.fdy);
-            n = n.safelyNormalized();
-            *vertexNormalsPtr++ = n.getX();
-            *vertexNormalsPtr++ = n.getY();
-            *vertexNormalsPtr++ = n.getZ();
-        }
+        //std::cout << "geometry data updated" << std::endl; 
+    } else {
+        //std::cout << "no update" << std::endl;
     }
 }
 
 /*
- *  Die Methode berechnet die Texturkoordinaten und die
- *  Indices des Gitters
- *  Aufrufparameter:
- *  nx       Anzahl der Stützstellen für den Parameter r.
- *  ny       Anzahl der Stützstellen für den Parameter t.
- *  indices  Zeiger auf ein Feld, das die Indices des
- *           Gitters aufnimmt.
- *  textureKoordinaten
- *           Zeiger auf ein Feld, das die Texturkoordinaten
- *           aufnimmt. Es folgen immer der u-Wert und der
- *           v-Wert aufeinander.
- *
- *  Für die Berechnung der Texturkoordinaten werden Inkrementwerte
- *  von 0.5 verwendet. Damit werden Texturkoordinaten für die
- *  wiederholte Verwendung des im Bereich [0, 1] x [0, 1]
- *  vorbereiteten Musters erhalten. Es entsteht ein Schachbrett-
- *  muster. 
+ *  Funktionen für eine animierte Schraubenlinie.
+ *  Die Ganghöhe der Schraubenlinie wird periodisch
+ *  verändert. Es entsteht der Eindruck einer Feder,
+ *  die abwechselnd einer Zug- und einer Druckkraft
+ *  ausgesetzt ist.
  */
-void ApplicationModel::createInvariantGeometryData
-                 (int nx, int ny,
-                  GLushort *indices, GLfloat *textureCoordinates 
-                 ) {
-    GLfloat* texCoordPtr = textureCoordinates;
-    const float deltaX = 0.5f,
-                deltaY = 0.5f;
-       
-    for (int i = 0; i < c_nx; i++) {
-        float tx = i * deltaX;
-        for (int j = 0; j < c_ny; j++) {
-            float ty = j * deltaY;
-            *texCoordPtr++ = tx;
-            *texCoordPtr++ = ty;
-        }
-    }
-    //  Berechnung der Mesh-Indices
-    GLushort *indexPtr = indices; 
-    for (int i = 0; i < ny - 1; i++) {
-        for (int j = 0; j < nx - 1; j++) {
-            unsigned int k = (unsigned int)(j*ny + i);
-            *indexPtr++ = k;
-            *indexPtr++ = k + ny;
-            *indexPtr++ = k + 1;
-            *indexPtr++ = k + ny;
-            *indexPtr++ = k + ny + 1;
-            *indexPtr++ = k + 1;
-        }
-    }
+void ApplicationModel::fn1 (int cnt, float t, SpacialPoint *ft) {
+    float arg = (float)(counter*3)/180.0*M_PI;
+    *ft = SpacialPoint(radius*cos(t),
+                       radius*sin(t),
+                       (1 + sin(arg)/d)*ganghoehe*t
+                      );
 }
 
-/*
- *  Berechnung des Funktionswerts und der beiden partiellen
- *  Ableitungen der parametrisierten Funktion.
- *  Die Funktion definiert eine als Plückerfläche bekannte
- *  Raumfläche.
- *
- *  Die Parameter bedeuten:
- *    r   einen Radius, den in die x-y-Ebene projizierten Abstand
- *        vom Mittelpunkt der Rotationsfläche. r sollte nicht
- *        negativ gewählt werden. 
- *    t   einen Rotationswinkel. Der empfohlene Wertebereich
- *        dieses Parameters ist das Intervall [-pi, pi].
- *
- *  Der als Instanzvariable bereitgestellte Animationsparameter
- *  counter, der ganzzahlige Werte zwischen 0 und 359 annimmt,
- *  wird im Argument einer trigonometrischen Funktion verwendet,
- *  die die Höhe der Plückerfläche periodisch vergrößert und
- *  verkleinert. 
- *
- *  Das Ergebnis der Rechnung wird über den Referenzparameter  ft
- *  zurückgegeben, der die Werte dreier Raumpunkte aufnimmt.
- */
-void ApplicationModel::fnp (float r, float t, VectorTriple *ft) {
-    //  Berechnung der veränderlichen Höhe der Raumfläche:
-    float arg = (float)counter/180.0*M_PI;
-    float h = hoehe/2.0* (1.1 + sin(arg));
-    ///  Für den Wert von  h  könnten man sich auch andere
-    ///  Funktionsausdrücke überlegen. Beispiele geeigneter
-    ///  Funktionsausdrücke sind:
-    ///    float h = hoehe * (1.0 + sin(arg));
-    ///    float h = hoehe * sin(arg);
+void ApplicationModel::fn1d1 (int cnt, float t, SpacialPoint *ft) {
+    float arg = (float)(counter*3)/180.0*M_PI;
+    *ft = SpacialPoint(-radius*sin(t),
+                        radius*cos(t),
+                       (1 + sin(arg)/d)*ganghoehe
+                      );
+}
 
-    //  Funktionswert an der Stelle (r, t):
-    ft -> fn = SpacialPoint(r*cos(t),
-                            r*sin(t),
-                            h * sin(blaetter*t));
-
-    //  Wert der partiellen Ableitung nach r an der Stelle (r, t):
-    ft -> fdx = SpacialPoint(cos(t),
-                             sin(t),
-                             0.0f);
-
-    //  Wert der partiellen Ableitung nach t an der Stelle (r, t):
-    ft -> fdy = SpacialPoint(-r*sin(t),
-                              r*cos(t),
-                              h*blaetter*cos(blaetter*t));
+void ApplicationModel::fn1d2 (int cnt, float t, SpacialPoint *ft) {
+    *ft = SpacialPoint(-radius*cos(t),
+                       -radius*sin(t),
+                       0.0f
+                      );
 }

@@ -10,17 +10,16 @@ precision mediump float;
  *      glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
  */
 
-uniform sampler2D textureSampler;
+uniform sampler2D texture;
 in vec2 texCoordinate;
 uniform bool useTexture;
 
 in vec4 fragmentColor;
-out vec4 outFragColor;
 
 void main() {
    if (useTexture) {
-       outFragColor = texture(textureSampler, texCoordinate) * fragmentColor;
+       gl_FragColor = texture2D(texture, texCoordinate) * fragmentColor;
    } else {
-       outFragColor = fragmentColor;
+       gl_FragColor = fragmentColor;
    }
 }
